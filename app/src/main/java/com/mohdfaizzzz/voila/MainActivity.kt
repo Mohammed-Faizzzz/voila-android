@@ -3,6 +3,7 @@ package com.mohdfaizzzz.voila
 import android.app.Activity
 import android.content.ContentValues.TAG
 import android.content.Context
+import android.content.Intent
 import android.content.IntentSender
 import android.os.Bundle
 import android.util.Log
@@ -13,6 +14,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -21,10 +23,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -46,66 +50,10 @@ import com.mohdfaizzzz.voila.ui.theme.VoilaTheme
 import kotlinx.coroutines.launch
 import java.util.Arrays
 import com.google.api.services.gmail.GmailScopes
-
+import kotlinx.coroutines.delay
 
 
 private const val REQUEST_CODE_AUTH = 1001
-
-//class MainActivity : ComponentActivity() {
-//    override fun onCreate(savedInstanceState: Bundle?) {
-//        super.onCreate(savedInstanceState)
-//        enableEdgeToEdge()
-//        val googleAuthClient = GoogleAuthClient(applicationContext)
-//        setContent {
-//            VoilaTheme {
-//                var isSignedIn by rememberSaveable {
-//                    mutableStateOf(googleAuthClient.isSignedIn())
-//                }
-//                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-//                    Column(
-//                        modifier = Modifier
-//                            .fillMaxSize()
-//                            .padding(innerPadding),
-//                        verticalArrangement = Arrangement.Center,
-//                        horizontalAlignment = Alignment.CenterHorizontally
-//                    ) {
-//                        if (isSignedIn) {
-////                            requestGmailAuthorization(this@MainActivity)
-//                            OutlinedButton(onClick = {
-//                                lifecycleScope.launch {
-//                                    googleAuthClient.signOut()
-//                                    isSignedIn = false
-//                                }
-//                            }) {
-//                                Text(
-//                                    text = "Sign Out",
-//                                    fontSize = 16.sp,
-//                                    modifier = Modifier.padding(
-//                                        horizontal = 24.dp, vertical = 4.dp
-//                                    )
-//                                )
-//                            }
-//                        } else {
-//                            OutlinedButton(onClick = {
-//                                lifecycleScope.launch {
-//                                    isSignedIn = googleAuthClient.signIn()
-//                                }
-//                            }) {
-//                                Text(
-//                                    text = "Sign In",
-//                                    fontSize = 16.sp,
-//                                    modifier = Modifier.padding(
-//                                        horizontal = 24.dp, vertical = 4.dp
-//                                    )
-//                                )
-//                            }
-//                        }
-//                    }
-//                }
-//            }
-//        }
-//    }
-//}
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -117,25 +65,34 @@ class MainActivity : ComponentActivity() {
         setContent {
             VoilaTheme {
                 var isSignedIn by rememberSaveable { mutableStateOf(googleAuthClient.isSignedIn()) }
+                var showLoading by rememberSaveable { mutableStateOf(false) }
 
-                SignInScreen(
-                    isSignedIn = isSignedIn,
-                    onSignInClick = {
-                        lifecycleScope.launch {
-                            isSignedIn = googleAuthClient.signIn()
-                            if (isSignedIn) {
-//                                requestGmailAuthorization(this@MainActivity)
-                                println("Sign in Successful!")
+                if (showLoading) {
+                    LoadingScreen {
+                        startActivity(Intent(this@MainActivity, DashboardActivity::class.java))
+                        finish()
+                    }
+                } else {
+                    SignInScreen(
+                        isSignedIn = isSignedIn,
+                        onSignInClick = {
+                            lifecycleScope.launch {
+                                isSignedIn = googleAuthClient.signIn()
+                                if (isSignedIn) {
+                                    showLoading = true
+                                    //                                requestGmailAuthorization(this@MainActivity)
+                                    println("Sign in Successful!")
+                                }
+                            }
+                        },
+                        onSignOutClick = {
+                            lifecycleScope.launch {
+                                googleAuthClient.signOut()
+                                isSignedIn = false
                             }
                         }
-                    },
-                    onSignOutClick = {
-                        lifecycleScope.launch {
-                            googleAuthClient.signOut()
-                            isSignedIn = false
-                        }
-                    }
-                )
+                    )
+                }
             }
         }
     }
@@ -200,6 +157,22 @@ fun SignInScreen(
     }
 }
 
+@Composable
+fun LoadingScreen(onFinishLoading: () -> Unit) {
+    LaunchedEffect(Unit) {
+        delay(2000) // 2-second loading
+        onFinishLoading()
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.White),
+        contentAlignment = Alignment.Center
+    ) {
+        CircularProgressIndicator(color = Color(0xFFA855F7)) // your purple
+    }
+}
 
 
 
