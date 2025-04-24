@@ -1,0 +1,54 @@
+{
+  "project_info": {
+    "project_number": "50580988449",
+    "project_id": "voila-c12bf",
+    "storage_bucket": "voila-c12bf.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:50580988449:android:cf3115d115c9ecc107f960",
+        "android_client_info": {
+          "package_name": "com.mohdfaizzzz.voila"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "50580988449-oe3rvv32rftcihn7uhislu48d5nkn0re.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.mohdfaizzzz.voila",
+            "certificate_hash": "aeae7d3031f394007dc04136adf68c42c296c8ce"
+          }
+        },
+        {
+          "client_id": "50580988449-vvl0ka1dr81po1d6j2sounoaajinvven.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDrS2RzaqjlgKyglOFDB0bjEmMeBqey8fU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "50580988449-vvl0ka1dr81po1d6j2sounoaajinvven.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "50580988449-i085vb47aitfood5b8lcqv72s7ps32do.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.mohdfaizzzz.Voila"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
