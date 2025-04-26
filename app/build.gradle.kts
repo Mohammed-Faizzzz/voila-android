@@ -61,6 +61,7 @@ dependencies {
     implementation(libs.identity.jvm)
     implementation(libs.google.firebase.firestore.ktx)
     implementation(libs.androidx.media3.common.ktx)
+    implementation(libs.com.google.firebase.firebase.messaging.ktx)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -83,4 +84,6 @@ dependencies {
     implementation(libs.google.oauth.client.jetty)
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.play.services.auth.v2100)
+
+    implementation(libs.google.firebase.messaging.ktx)
 }

@@ -25,6 +25,7 @@ playServicesAuthVersion = "<latest version>"
 identityJvm = "202411.1"
 firebaseFirestoreKtx = "25.1.4"
 media3CommonKtx = "1.6.1"
+firebaseMessagingKtx = "24.1.1"
 
 [libraries]
 androidx-activity-compose-v182 = { module = "androidx.activity:activity-compose", version.ref = "activityComposeVersion" }
@@ -40,6 +41,7 @@ firebase-messaging-ktx = { module = "com.google.firebase:firebase-messaging-ktx"
 google-api-client-android = { module = "com.google.api-client:google-api-client-android", version.ref = "googleApiClientAndroid" }
 google-api-client-android-v1330 = { module = "com.google.api-client:google-api-client-android", version.ref = "googleApiClientAndroidVersion" }
 google-api-services-gmail = { module = "com.google.apis:google-api-services-gmail", version.ref = "googleApiServicesGmail" }
+google-firebase-messaging-ktx = { module = "com.google.firebase:firebase-messaging-ktx" }
 google-oauth-client-jetty = { module = "com.google.oauth-client:google-oauth-client-jetty", version.ref = "googleOauthClientJetty" }
 googleid = { module = "com.google.android.libraries.identity.googleid:googleid", version.ref = "googleid" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
@@ -62,6 +64,7 @@ play-services-auth-vlatestversion = { module = "com.google.android.gms:play-serv
 identity-jvm = { group = "com.android.identity", name = "identity-jvm", version.ref = "identityJvm" }
 google-firebase-firestore-ktx = { group = "com.google.firebase", name = "firebase-firestore-ktx", version.ref = "firebaseFirestoreKtx" }
 androidx-media3-common-ktx = { group = "androidx.media3", name = "media3-common-ktx", version.ref = "media3CommonKtx" }
+com-google-firebase-firebase-messaging-ktx = { group = "com.google.firebase", name = "firebase-messaging-ktx", version.ref = "firebaseMessagingKtx" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
