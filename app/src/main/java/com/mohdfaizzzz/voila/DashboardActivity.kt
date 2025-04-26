@@ -42,6 +42,9 @@ class DashboardActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         val userId = FirebaseAuth.getInstance().currentUser?.uid.orEmpty()
         val googleAuthClient = GoogleAuthClient(applicationContext)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            requestPermissions(arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), 101)
+        }
 
         setContent {
             VoilaTheme {
@@ -83,7 +86,12 @@ fun DashboardScreen(userId: String, onSignOut: () -> Unit) {
         Column(
             modifier = Modifier.fillMaxSize().padding(innerPadding).padding(24.dp)
         ) {
-            Text("Your Subscriptions", fontSize = 28.sp, color = Color(0xFFC084FC), fontWeight = FontWeight.Bold)
+            Text(
+                "Your Subscriptions",
+                fontSize = 28.sp,
+                color = Color(0xFFC084FC),
+                fontWeight = FontWeight.Bold
+            )
 
             subscriptions.forEach { sub ->
                 SubscriptionCard(sub) { }
@@ -106,7 +114,10 @@ fun DashboardScreen(userId: String, onSignOut: () -> Unit) {
 
                 Button(
                     onClick = { showDialog = true },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFC084FC), contentColor = Color.White),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFFC084FC),
+                        contentColor = Color.White
+                    ),
                     modifier = Modifier.weight(1f).padding(start = 8.dp)
                 ) {
                     Text("Add Subscription")
@@ -153,6 +164,26 @@ fun showRenewalNotificationIfDueSoon(context: Context, subs: List<Subscription>)
             manager?.notify(sub.id.hashCode(), notification)
         }
     }
+//    val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+//    val channelId = "voila_test_channel"
+//
+//    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+//        val channel = NotificationChannel(
+//            channelId,
+//            "Test Notifications",
+//            NotificationManager.IMPORTANCE_HIGH
+//        )
+//        manager.createNotificationChannel(channel)
+//    }
+//
+//    val notification = NotificationCompat.Builder(context, channelId)
+//        .setSmallIcon(android.R.drawable.ic_dialog_info)
+//        .setContentTitle("Test Notification")
+//        .setContentText("This is a test message")
+//        .setPriority(NotificationCompat.PRIORITY_HIGH)
+//        .build()
+//
+//    manager.notify(999, notification)
 }
 
 @Composable
