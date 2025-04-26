@@ -1,56 +1,34 @@
 package com.mohdfaizzzz.voila
 
 import android.app.Activity
-import android.content.ContentValues.TAG
-import android.content.Context
 import android.content.Intent
 import android.content.IntentSender
 import android.os.Bundle
 import android.util.Log
-import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.systemBarsPadding
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.app.ActivityCompat.startIntentSenderForResult
 import androidx.lifecycle.lifecycleScope
 import com.google.android.gms.auth.api.identity.AuthorizationRequest
 import com.google.android.gms.auth.api.identity.AuthorizationResult
 import com.google.android.gms.auth.api.identity.Identity
-import com.google.android.gms.common.Scopes
 import com.google.android.gms.common.api.Scope
 import com.google.api.services.gmail.GmailScopes
+import com.google.firebase.auth.FirebaseAuth
 import com.mohdfaizzzz.voila.ui.theme.VoilaTheme
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-
 
 private const val REQUEST_CODE_AUTH = 1001
 
@@ -80,14 +58,7 @@ class MainActivity : ComponentActivity() {
                                 if (isSignedIn) {
                                     showLoading = true
                                     requestGmailAuthorization(this@MainActivity)
-                                    println("Sign in Successful!")
                                 }
-                            }
-                        },
-                        onSignOutClick = {
-                            lifecycleScope.launch {
-                                googleAuthClient.signOut()
-                                isSignedIn = false
                             }
                         }
                     )
@@ -100,14 +71,11 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun SignInScreen(
     isSignedIn: Boolean,
-    onSignInClick: () -> Unit,
-    onSignOutClick: () -> Unit
+    onSignInClick: () -> Unit
 ) {
     Scaffold(
         containerColor = Color.White,
-        modifier = Modifier
-            .fillMaxSize()
-            .systemBarsPadding()
+        modifier = Modifier.fillMaxSize()
     ) { innerPadding ->
         Column(
             modifier = Modifier
@@ -117,40 +85,15 @@ fun SignInScreen(
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text(
-                text = "Voila",
-                fontSize = 44.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color(0xFFA855F7) // Updated purple
-            )
-
+            Text("Voila", fontSize = 44.sp, fontWeight = FontWeight.Bold, color = Color(0xFFA855F7))
             Spacer(modifier = Modifier.height(8.dp))
-
-            Text(
-                text = "Your subscriptions, simplified.",
-                color = Color(0xFF666666),
-                fontSize = 16.sp
-            )
-
+            Text("Your subscriptions, simplified.", color = Color(0xFF666666), fontSize = 16.sp)
             Spacer(modifier = Modifier.height(40.dp))
-
-            if (isSignedIn) {
-                OutlinedButton(
-                    onClick = onSignOutClick,
-                    border = BorderStroke(1.dp, Color(0xFFA855F7))
-                ) {
-                    Text("Sign Out", fontSize = 16.sp, color = Color(0xFFA855F7))
-                }
-            } else {
-                Button(
-                    onClick = onSignInClick,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFFA855F7),
-                        contentColor = Color.White
-                    )
-                ) {
-                    Text("Sign in with Google", fontSize = 16.sp)
-                }
+            Button(
+                onClick = onSignInClick,
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFA855F7), contentColor = Color.White)
+            ) {
+                Text("Sign in with Google", fontSize = 16.sp)
             }
         }
     }
@@ -159,53 +102,29 @@ fun SignInScreen(
 @Composable
 fun LoadingScreen(onFinishLoading: () -> Unit) {
     LaunchedEffect(Unit) {
-        delay(2000) // 2-second loading
+        delay(2000)
         onFinishLoading()
     }
-
     Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.White),
+        modifier = Modifier.fillMaxSize().background(Color.White),
         contentAlignment = Alignment.Center
     ) {
-        CircularProgressIndicator(color = Color(0xFFA855F7)) // your purple
+        CircularProgressIndicator(color = Color(0xFFA855F7))
     }
 }
-
-
 
 private fun requestGmailAuthorization(activity: Activity) {
     val requestedScopes = listOf(Scope(GmailScopes.GMAIL_READONLY))
-    val authorizationRequest =
-        AuthorizationRequest.builder().setRequestedScopes(requestedScopes).build()
-    Identity.getAuthorizationClient(activity)
-        .authorize(authorizationRequest)
-        .addOnSuccessListener { authorizationResult: AuthorizationResult ->
-            if (authorizationResult.hasResolution()) {
-                val pendingIntent = authorizationResult.pendingIntent
+    val authorizationRequest = AuthorizationRequest.builder().setRequestedScopes(requestedScopes).build()
+    Identity.getAuthorizationClient(activity).authorize(authorizationRequest)
+        .addOnSuccessListener { result ->
+            result.pendingIntent?.let {
                 try {
-                    activity.startIntentSenderForResult( // ✅ Use activity
-                        pendingIntent!!.intentSender,
-                        REQUEST_CODE_AUTH,
-                        null,
-                        0,
-                        0,
-                        0,
-                        null
-                    )
+                    activity.startIntentSenderForResult(it.intentSender, REQUEST_CODE_AUTH, null, 0, 0, 0, null)
                 } catch (e: IntentSender.SendIntentException) {
-                    Log.e(TAG, "Couldn't start Authorization UI: ${e.localizedMessage}")
+                    Log.e("Auth", "Failed to start auth UI", e)
                 }
-            } else {
-                println("Access Granted")
-                // TODO: Read emails here
             }
         }
-        .addOnFailureListener { e ->
-            Log.e(TAG, "Failed to authorize", e)
-        }
+        .addOnFailureListener { e -> Log.e("Auth", "Authorization failed", e) }
 }
-
-
-

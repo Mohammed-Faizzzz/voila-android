@@ -1,5 +1,6 @@
 package com.mohdfaizzzz.voila
 
+import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
@@ -7,35 +8,42 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.android.identity.util.UUID
+import androidx.lifecycle.lifecycleScope
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import com.mohdfaizzzz.voila.ui.theme.VoilaTheme
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
-import java.util.Locale
+import java.util.*
 
 class DashboardActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        val userId = FirebaseAuth.getInstance().currentUser?.uid.orEmpty()
+        val googleAuthClient = GoogleAuthClient(applicationContext)
+
         setContent {
             VoilaTheme {
-                val userId = FirebaseAuth.getInstance().currentUser?.uid.orEmpty()
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    Column(modifier = Modifier.padding(innerPadding)) {
-                        DashboardScreen(userId = userId)
+                var showLoading by remember { mutableStateOf(true) }
+
+                if (showLoading) {
+                    LoadingScreen {
+                        showLoading = false
+                    }
+                } else {
+                    DashboardScreen(userId = userId) {
+                        lifecycleScope.launch {
+                            googleAuthClient.signOut()
+                            startActivity(Intent(this@DashboardActivity, MainActivity::class.java))
+                            finish()
+                        }
                     }
                 }
             }
@@ -44,7 +52,7 @@ class DashboardActivity : ComponentActivity() {
 }
 
 @Composable
-fun DashboardScreen(userId: String) {
+fun DashboardScreen(userId: String, onSignOut: () -> Unit) {
     val subscriptions = remember { mutableStateListOf<Subscription>() }
     var showDialog by remember { mutableStateOf(false) }
 
@@ -57,36 +65,36 @@ fun DashboardScreen(userId: String) {
 
     Scaffold(containerColor = Color.White) { innerPadding ->
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .padding(24.dp)
+            modifier = Modifier.fillMaxSize().padding(innerPadding).padding(24.dp)
         ) {
-            Text(
-                text = "Your Subscriptions",
-                fontSize = 28.sp,
-                color = Color(0xFFC084FC),
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(bottom = 24.dp)
-            )
+            Text("Your Subscriptions", fontSize = 28.sp, color = Color(0xFFC084FC), fontWeight = FontWeight.Bold)
 
             subscriptions.forEach { sub ->
-                SubscriptionCard(sub) {
-                    // delete logic here if needed
-                }
+                SubscriptionCard(sub) { }
             }
 
             Spacer(modifier = Modifier.weight(1f))
 
-            Button(
-                onClick = { showDialog = true },
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFFC084FC),
-                    contentColor = Color.White
-                ),
-                modifier = Modifier.align(Alignment.CenterHorizontally)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly
             ) {
-                Text("Add Subscription")
+                OutlinedButton(
+                    onClick = onSignOut,
+                    border = BorderStroke(1.dp, Color(0xFFC084FC)),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFC084FC)),
+                    modifier = Modifier.weight(1f).padding(end = 8.dp)
+                ) {
+                    Text("Sign Out")
+                }
+
+                Button(
+                    onClick = { showDialog = true },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFC084FC), contentColor = Color.White),
+                    modifier = Modifier.weight(1f).padding(start = 8.dp)
+                ) {
+                    Text("Add Subscription")
+                }
             }
         }
 
