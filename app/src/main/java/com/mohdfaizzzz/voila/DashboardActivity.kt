@@ -6,14 +6,15 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
-import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -31,6 +32,10 @@ import java.text.SimpleDateFormat
 import java.util.*
 import java.util.concurrent.TimeUnit
 import androidx.core.net.toUri
+import android.app.DatePickerDialog
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.foundation.clickable
+
 
 class DashboardActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -206,13 +211,37 @@ fun SubscriptionCard(sub: Subscription, onCancel: () -> Unit = {}) {
 }
 
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddSubscriptionDialog(onDismiss: () -> Unit, onAdd: (Subscription) -> Unit) {
     var serviceName by remember { mutableStateOf("") }
     var currency by remember { mutableStateOf("GBP") }
     var amount by remember { mutableStateOf("") }
-    var renewalDateText by remember { mutableStateOf("") } // user inputs date as text
-    var renewalFreq by remember { mutableStateOf("") }
+    var renewalDate by remember { mutableStateOf("") }
+    var renewalFreq by remember { mutableStateOf("Monthly") }
+    var cancelURL by remember { mutableStateOf("") }
+
+    val context = LocalContext.current
+    val showDatePicker = remember { mutableStateOf(false) }
+
+    val currencyOptions = listOf("USD", "EUR", "GBP", "SGD", "INR", "JPY", "AUD", "CAD") // add more if needed
+    val renewalOptions = listOf("Monthly", "Annual")
+
+//    if (showDatePicker.value) {
+//        android.app.DatePickerDialog(
+//            context,
+//            { _, year, month, day ->
+//                val cal = Calendar.getInstance().apply {
+//                    set(year, month, day)
+//                }
+//                renewalDate = cal.time
+//                showDatePicker.value = false
+//            },
+//            Calendar.getInstance().get(Calendar.YEAR),
+//            Calendar.getInstance().get(Calendar.MONTH),
+//            Calendar.getInstance().get(Calendar.DAY_OF_MONTH)
+//        ).show()
+//    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -222,45 +251,114 @@ fun AddSubscriptionDialog(onDismiss: () -> Unit, onAdd: (Subscription) -> Unit) 
                 OutlinedTextField(
                     value = serviceName,
                     onValueChange = { serviceName = it },
-                    label = { Text("Service Name") }
+                    label = { Text("Service Name") },
+                    modifier = Modifier.fillMaxWidth()
                 )
+
+                Row(modifier = Modifier.fillMaxWidth()) {
+                    // Currency Dropdown
+                    var expandedCurrency by remember { mutableStateOf(false) }
+                    Box(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
+                        OutlinedTextField(
+                            value = currency,
+                            onValueChange = {},
+                            readOnly = true,
+                            label = { Text("Currency") },
+                            modifier = Modifier.fillMaxWidth(),
+                            trailingIcon = {
+                                IconButton(onClick = { expandedCurrency = true }) {
+                                    Icon(Icons.Default.ArrowDropDown, contentDescription = "Currency")
+                                }
+                            }
+                        )
+                        DropdownMenu(
+                            expanded = expandedCurrency,
+                            onDismissRequest = { expandedCurrency = false }
+                        ) {
+                            currencyOptions.forEach {
+                                DropdownMenuItem(
+                                    text = { Text(it) },
+                                    onClick = {
+                                        currency = it
+                                        expandedCurrency = false
+                                    }
+                                )
+                            }
+                        }
+                    }
+
+                    // Amount Field
+                    OutlinedTextField(
+                        value = amount,
+                        onValueChange = { amount = it },
+                        label = { Text("Amount") },
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+
+                // Renewal Date Picker
                 OutlinedTextField(
-                    value = amount,
-                    onValueChange = { amount = it },
-                    label = { Text("Amount") }
+                    value = renewalDate,
+                    onValueChange = { renewalDate = it },
+                    label = { Text("Renewal Date (yyyy-MM-dd)") },
+//                    modifier = Modifier
+//                        .fillMaxWidth()
+//                        .padding(top = 8.dp)
                 )
+
+                // Renewal Frequency Dropdown
+                var expandedFreq by remember { mutableStateOf(false) }
+                Box(modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
+                    OutlinedTextField(
+                        value = renewalFreq,
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("Renewal Frequency") },
+                        trailingIcon = {
+                            IconButton(onClick = { expandedFreq = true }) {
+                                Icon(Icons.Default.ArrowDropDown, contentDescription = "Frequency")
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    DropdownMenu(
+                        expanded = expandedFreq,
+                        onDismissRequest = { expandedFreq = false }
+                    ) {
+                        renewalOptions.forEach {
+                            DropdownMenuItem(
+                                text = { Text(it) },
+                                onClick = {
+                                    renewalFreq = it
+                                    expandedFreq = false
+                                }
+                            )
+                        }
+                    }
+                }
                 OutlinedTextField(
-                    value = renewalDateText,
-                    onValueChange = { renewalDateText = it },
-                    label = { Text("Renewal Date (yyyy-MM-dd)") }
-                )
-                OutlinedTextField(
-                    value = renewalFreq,
-                    onValueChange = { renewalFreq = it },
-                    label = { Text("Renewal Frequency") }
+                    value = cancelURL,
+                    onValueChange = { cancelURL = it },
+                    label = { Text("Cancellation Link") },
                 )
             }
         },
         confirmButton = {
             Button(onClick = {
-                if (serviceName.isNotBlank() && amount.isNotBlank() && renewalDateText.isNotBlank() && renewalFreq.isNotBlank()) {
-                    try {
-                        val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-                        val parsedDate = dateFormat.parse(renewalDateText)
-                        val timestamp = Timestamp(parsedDate!!)
+                if (serviceName.isNotBlank() && amount.isNotBlank() && renewalDate.isNotBlank()) {
+                    val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+                    val parsedDate = dateFormat.parse(renewalDate)
+                    val timestamp = Timestamp(parsedDate!!)
 
-                        val sub = Subscription(
-                            id = UUID.randomUUID().toString(),
-                            serviceName = serviceName,
-                            currency = currency,
-                            amount = amount.toDoubleOrNull() ?: 0.0,
-                            renewalDate = timestamp,
-                            renewalFreq = renewalFreq
-                        )
-                        onAdd(sub)
-                    } catch (e: Exception) {
-                        Log.e("AddDialog", "Date parsing error", e)
-                    }
+                    val sub = Subscription(
+                        id = UUID.randomUUID().toString(),
+                        serviceName = serviceName,
+                        currency = currency,
+                        amount = amount.toDoubleOrNull() ?: 0.0,
+                        renewalDate = timestamp,
+                        renewalFreq = renewalFreq
+                    )
+                    onAdd(sub)
                 }
             }) {
                 Text("Add")
