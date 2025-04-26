@@ -30,6 +30,7 @@ import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
 import java.util.concurrent.TimeUnit
+import androidx.core.net.toUri
 
 class DashboardActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -150,7 +151,9 @@ fun showRenewalNotificationIfDueSoon(context: Context, subs: List<Subscription>)
 }
 
 @Composable
-fun SubscriptionCard(sub: Subscription, onCancel: () -> Unit) {
+fun SubscriptionCard(sub: Subscription, onCancel: () -> Unit = {}) {
+    val context = LocalContext.current
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -184,7 +187,13 @@ fun SubscriptionCard(sub: Subscription, onCancel: () -> Unit) {
             )
             Spacer(modifier = Modifier.height(8.dp))
             OutlinedButton(
-                onClick = onCancel,
+                onClick = {
+                    val intent = Intent(Intent.ACTION_VIEW).apply {
+                        data = "https://www.netflix.com/cancelplan".toUri()
+                    }
+                    context.startActivity(intent)
+                    onCancel()
+                },
                 border = BorderStroke(1.dp, Color(0xFFC084FC)),
                 colors = ButtonDefaults.outlinedButtonColors(
                     contentColor = Color(0xFFC084FC)
