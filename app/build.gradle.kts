@@ -59,6 +59,7 @@ dependencies {
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
     implementation(libs.identity.jvm)
+    implementation(libs.google.firebase.firestore.ktx)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -72,10 +73,13 @@ dependencies {
 
     platform(libs.firebase.bom)
     implementation(libs.firebase.auth.ktx)
+    implementation(libs.firebase.firestore.ktx)
 
     implementation(libs.play.services.auth)
     implementation(libs.google.api.client.android)
     implementation(libs.google.api.services.gmail) // For Gmail API scopes
 
-
+    implementation(libs.google.oauth.client.jetty)
+    implementation(libs.kotlinx.coroutines.android)
+    implementation(libs.play.services.auth.v2100)
 }

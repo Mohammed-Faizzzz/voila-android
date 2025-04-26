@@ -46,11 +46,10 @@ import com.google.android.gms.auth.api.identity.AuthorizationResult
 import com.google.android.gms.auth.api.identity.Identity
 import com.google.android.gms.common.Scopes
 import com.google.android.gms.common.api.Scope
-import com.mohdfaizzzz.voila.ui.theme.VoilaTheme
-import kotlinx.coroutines.launch
-import java.util.Arrays
 import com.google.api.services.gmail.GmailScopes
+import com.mohdfaizzzz.voila.ui.theme.VoilaTheme
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 
 private const val REQUEST_CODE_AUTH = 1001
@@ -80,7 +79,7 @@ class MainActivity : ComponentActivity() {
                                 isSignedIn = googleAuthClient.signIn()
                                 if (isSignedIn) {
                                     showLoading = true
-                                    //                                requestGmailAuthorization(this@MainActivity)
+                                    requestGmailAuthorization(this@MainActivity)
                                     println("Sign in Successful!")
                                 }
                             }

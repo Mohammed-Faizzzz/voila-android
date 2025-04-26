@@ -1,13 +1,19 @@
 package com.mohdfaizzzz.voila
 
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -15,21 +21,22 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.android.identity.util.UUID
+import com.google.firebase.Timestamp
+import com.google.firebase.auth.FirebaseAuth
 import com.mohdfaizzzz.voila.ui.theme.VoilaTheme
+import java.text.SimpleDateFormat
+import java.util.Locale
 
 class DashboardActivity : ComponentActivity() {
-    @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
             VoilaTheme {
-                Scaffold(
-                    modifier = Modifier.fillMaxSize(),
-                    topBar = {
-                        TopAppBar(title = { Text("Your Dashboard") })
+                val userId = FirebaseAuth.getInstance().currentUser?.uid.orEmpty()
+                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
+                    Column(modifier = Modifier.padding(innerPadding)) {
+                        DashboardScreen(userId = userId)
                     }
-                ) { innerPadding ->
-                    DashboardScreen(Modifier.padding(innerPadding))
                 }
             }
         }
@@ -37,16 +44,18 @@ class DashboardActivity : ComponentActivity() {
 }
 
 @Composable
-fun DashboardScreen(modifier: Modifier = Modifier) {
+fun DashboardScreen(userId: String) {
+    val subscriptions = remember { mutableStateListOf<Subscription>() }
+    var showDialog by remember { mutableStateOf(false) }
 
-    val subscriptions = remember {
-        mutableStateListOf(
-            Subscription("1", "Netflix", 15.99, "2025-05-01"),
-            Subscription("2", "Spotify", 9.99, "2025-04-25")
-        )
+    LaunchedEffect(Unit) {
+        getSubscriptions(userId) {
+            subscriptions.clear()
+            subscriptions.addAll(it)
+        }
     }
 
-    Scaffold { innerPadding ->
+    Scaffold(containerColor = Color.White) { innerPadding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -62,45 +71,151 @@ fun DashboardScreen(modifier: Modifier = Modifier) {
             )
 
             subscriptions.forEach { sub ->
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 8.dp),
-                    elevation = CardDefaults.cardElevation(4.dp)
-                ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text(text = sub.serviceName, fontSize = 20.sp, fontWeight = FontWeight.Bold)
-                        Text(text = "RM ${sub.amount}", fontSize = 16.sp)
-                        Text(text = "Renews on ${sub.renewalDate}", fontSize = 14.sp, color = Color.Gray)
-                        Spacer(Modifier.height(8.dp))
-                        OutlinedButton(onClick = {
-                            subscriptions.remove(sub)
-                        }) {
-                            Text("Cancel")
-                        }
-                    }
+                SubscriptionCard(sub) {
+                    // delete logic here if needed
                 }
             }
 
             Spacer(modifier = Modifier.weight(1f))
 
             Button(
-                onClick = {
-                    // Just add a fake one for now
-                    subscriptions.add(
-                        Subscription(
-                            id = UUID.randomUUID().toString(),
-                            serviceName = "Disney+",
-                            amount = 12.99,
-                            renewalDate = "2025-06-10"
-                        )
-                    )
-                },
+                onClick = { showDialog = true },
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFFC084FC),
+                    contentColor = Color.White
+                ),
                 modifier = Modifier.align(Alignment.CenterHorizontally)
             ) {
                 Text("Add Subscription")
             }
         }
+
+        if (showDialog) {
+            AddSubscriptionDialog(
+                onDismiss = { showDialog = false },
+                onAdd = { newSub ->
+                    addSubscription(userId, newSub) {
+                        subscriptions.add(newSub)
+                        showDialog = false
+                    }
+                }
+            )
+        }
     }
 }
+
+@Composable
+fun SubscriptionCard(sub: Subscription, onCancel: () -> Unit) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = Color(0xFFF8F8F8)
+        ),
+        elevation = CardDefaults.cardElevation(4.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                text = sub.serviceName,
+                fontSize = 20.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = Color.Black
+            )
+            Text(
+                text = "${sub.currency} ${sub.amount}",
+                fontSize = 16.sp,
+                color = Color.DarkGray
+            )
+            Text(
+                text = "Renews on ${sub.renewalDate.toDate().toString().substring(0, 10)}",
+                fontSize = 14.sp,
+                color = Color.Gray
+            )
+            Text(
+                text = "Every ${sub.renewalFreq}",
+                fontSize = 14.sp,
+                color = Color.Gray
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            OutlinedButton(
+                onClick = onCancel,
+                border = BorderStroke(1.dp, Color(0xFFC084FC)),
+                colors = ButtonDefaults.outlinedButtonColors(
+                    contentColor = Color(0xFFC084FC)
+                )
+            ) {
+                Text("Cancel")
+            }
+        }
+    }
+}
+
+
+@Composable
+fun AddSubscriptionDialog(onDismiss: () -> Unit, onAdd: (Subscription) -> Unit) {
+    var serviceName by remember { mutableStateOf("") }
+    var currency by remember { mutableStateOf("GBP") }
+    var amount by remember { mutableStateOf("") }
+    var renewalDateText by remember { mutableStateOf("") } // user inputs date as text
+    var renewalFreq by remember { mutableStateOf("") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Add Subscription") },
+        text = {
+            Column {
+                OutlinedTextField(
+                    value = serviceName,
+                    onValueChange = { serviceName = it },
+                    label = { Text("Service Name") }
+                )
+                OutlinedTextField(
+                    value = amount,
+                    onValueChange = { amount = it },
+                    label = { Text("Amount") }
+                )
+                OutlinedTextField(
+                    value = renewalDateText,
+                    onValueChange = { renewalDateText = it },
+                    label = { Text("Renewal Date (yyyy-MM-dd)") }
+                )
+                OutlinedTextField(
+                    value = renewalFreq,
+                    onValueChange = { renewalFreq = it },
+                    label = { Text("Renewal Frequency") }
+                )
+            }
+        },
+        confirmButton = {
+            Button(onClick = {
+                if (serviceName.isNotBlank() && amount.isNotBlank() && renewalDateText.isNotBlank() && renewalFreq.isNotBlank()) {
+                    try {
+                        val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+                        val parsedDate = dateFormat.parse(renewalDateText)
+                        val timestamp = Timestamp(parsedDate!!)
+
+                        val sub = Subscription(
+                            id = UUID.randomUUID().toString(),
+                            serviceName = serviceName,
+                            currency = currency,
+                            amount = amount.toDoubleOrNull() ?: 0.0,
+                            renewalDate = timestamp,
+                            renewalFreq = renewalFreq
+                        )
+                        onAdd(sub)
+                    } catch (e: Exception) {
+                        Log.e("AddDialog", "Date parsing error", e)
+                    }
+                }
+            }) {
+                Text("Add")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancel") }
+        }
+    )
+}
+
 
