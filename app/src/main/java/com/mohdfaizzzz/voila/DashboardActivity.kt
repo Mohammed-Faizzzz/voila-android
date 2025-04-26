@@ -1,6 +1,10 @@
 package com.mohdfaizzzz.voila
 
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.content.Context
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
@@ -12,9 +16,12 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.app.NotificationCompat
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
@@ -22,6 +29,7 @@ import com.mohdfaizzzz.voila.ui.theme.VoilaTheme
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
+import java.util.concurrent.TimeUnit
 
 class DashboardActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -55,11 +63,13 @@ class DashboardActivity : ComponentActivity() {
 fun DashboardScreen(userId: String, onSignOut: () -> Unit) {
     val subscriptions = remember { mutableStateListOf<Subscription>() }
     var showDialog by remember { mutableStateOf(false) }
+    val context = LocalContext.current
 
     LaunchedEffect(Unit) {
         getSubscriptions(userId) {
             subscriptions.clear()
             subscriptions.addAll(it)
+            showRenewalNotificationIfDueSoon(context, it)
         }
     }
 
@@ -108,6 +118,33 @@ fun DashboardScreen(userId: String, onSignOut: () -> Unit) {
                     }
                 }
             )
+        }
+    }
+}
+
+fun showRenewalNotificationIfDueSoon(context: Context, subs: List<Subscription>) {
+    val now = Timestamp.now().toDate()
+    val dayInMillis = TimeUnit.DAYS.toMillis(1)
+
+    subs.forEach { sub ->
+        val diff = sub.renewalDate.toDate().time - now.time
+        if (diff in 0..dayInMillis) {
+            val manager = ContextCompat.getSystemService(context, NotificationManager::class.java)
+            val channelId = "voila_renewal_reminders"
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                val channel = NotificationChannel(channelId, "Renewal Reminders", NotificationManager.IMPORTANCE_DEFAULT)
+                manager?.createNotificationChannel(channel)
+            }
+
+            val notification = NotificationCompat.Builder(context, channelId)
+                .setContentTitle("Upcoming Renewal")
+                .setContentText("${sub.serviceName} renews tomorrow!")
+                .setSmallIcon(android.R.drawable.ic_dialog_info)
+                .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+                .build()
+
+            manager?.notify(sub.id.hashCode(), notification)
         }
     }
 }
