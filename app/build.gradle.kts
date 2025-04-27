@@ -86,4 +86,6 @@ dependencies {
     implementation(libs.play.services.auth.v2100)
 
     implementation(libs.google.firebase.messaging.ktx)
+    implementation(libs.androidx.navigation.compose)
+
 }

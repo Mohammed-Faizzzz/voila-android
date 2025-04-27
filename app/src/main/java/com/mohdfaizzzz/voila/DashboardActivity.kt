@@ -164,26 +164,6 @@ fun showRenewalNotificationIfDueSoon(context: Context, subs: List<Subscription>)
             manager?.notify(sub.id.hashCode(), notification)
         }
     }
-//    val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-//    val channelId = "voila_test_channel"
-//
-//    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-//        val channel = NotificationChannel(
-//            channelId,
-//            "Test Notifications",
-//            NotificationManager.IMPORTANCE_HIGH
-//        )
-//        manager.createNotificationChannel(channel)
-//    }
-//
-//    val notification = NotificationCompat.Builder(context, channelId)
-//        .setSmallIcon(android.R.drawable.ic_dialog_info)
-//        .setContentTitle("Test Notification")
-//        .setContentText("This is a test message")
-//        .setPriority(NotificationCompat.PRIORITY_HIGH)
-//        .build()
-//
-//    manager.notify(999, notification)
 }
 
 @Composable
@@ -252,27 +232,8 @@ fun AddSubscriptionDialog(onDismiss: () -> Unit, onAdd: (Subscription) -> Unit) 
     var renewalFreq by remember { mutableStateOf("Monthly") }
     var cancelURL by remember { mutableStateOf("") }
 
-    val context = LocalContext.current
-    val showDatePicker = remember { mutableStateOf(false) }
-
     val currencyOptions = listOf("USD", "EUR", "GBP", "SGD", "INR", "JPY", "AUD", "CAD") // add more if needed
     val renewalOptions = listOf("Monthly", "Annual")
-
-//    if (showDatePicker.value) {
-//        android.app.DatePickerDialog(
-//            context,
-//            { _, year, month, day ->
-//                val cal = Calendar.getInstance().apply {
-//                    set(year, month, day)
-//                }
-//                renewalDate = cal.time
-//                showDatePicker.value = false
-//            },
-//            Calendar.getInstance().get(Calendar.YEAR),
-//            Calendar.getInstance().get(Calendar.MONTH),
-//            Calendar.getInstance().get(Calendar.DAY_OF_MONTH)
-//        ).show()
-//    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -332,9 +293,6 @@ fun AddSubscriptionDialog(onDismiss: () -> Unit, onAdd: (Subscription) -> Unit) 
                     value = renewalDate,
                     onValueChange = { renewalDate = it },
                     label = { Text("Renewal Date (yyyy-MM-dd)") },
-//                    modifier = Modifier
-//                        .fillMaxWidth()
-//                        .padding(top = 8.dp)
                 )
 
                 // Renewal Frequency Dropdown

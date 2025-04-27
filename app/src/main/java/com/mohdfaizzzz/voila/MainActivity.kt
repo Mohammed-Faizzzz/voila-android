@@ -29,6 +29,11 @@ import com.google.firebase.auth.FirebaseAuth
 import com.mohdfaizzzz.voila.ui.theme.VoilaTheme
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import androidx.navigation.NavHostController
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
+
 
 private const val REQUEST_CODE_AUTH = 1001
 
@@ -42,22 +47,22 @@ class MainActivity : ComponentActivity() {
         setContent {
             VoilaTheme {
                 var isSignedIn by rememberSaveable { mutableStateOf(googleAuthClient.isSignedIn()) }
-                var showLoading by rememberSaveable { mutableStateOf(false) }
 
-                if (showLoading) {
-                    LoadingScreen {
+                if (isSignedIn) {
+                    LaunchedEffect(Unit) {
                         startActivity(Intent(this@MainActivity, DashboardActivity::class.java))
                         finish()
                     }
                 } else {
                     SignInScreen(
-                        isSignedIn = isSignedIn,
+                        isSignedIn = false,
                         onSignInClick = {
                             lifecycleScope.launch {
-                                isSignedIn = googleAuthClient.signIn()
-                                if (isSignedIn) {
-                                    showLoading = true
+                                val success = googleAuthClient.signIn()
+                                if (success) {
                                     requestGmailAuthorization(this@MainActivity)
+                                    startActivity(Intent(this@MainActivity, DashboardActivity::class.java))
+                                    finish()
                                 }
                             }
                         }
@@ -102,7 +107,7 @@ fun SignInScreen(
 @Composable
 fun LoadingScreen(onFinishLoading: () -> Unit) {
     LaunchedEffect(Unit) {
-        delay(2000)
+        delay(20)
         onFinishLoading()
     }
     Box(
