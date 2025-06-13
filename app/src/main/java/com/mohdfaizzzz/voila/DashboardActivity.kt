@@ -1,5 +1,6 @@
 package com.mohdfaizzzz.voila
 
+import android.app.ComponentCaller
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
@@ -33,18 +34,25 @@ import java.util.*
 import java.util.concurrent.TimeUnit
 import androidx.core.net.toUri
 import android.app.DatePickerDialog
+import android.util.Log
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.foundation.clickable
 
 
 class DashboardActivity : ComponentActivity() {
+
+    private val googleAuthClient: GoogleAuthClient by lazy { GoogleAuthClient(applicationContext) }
+    private val TAG = "DashboardActivity" // Define TAG for logging
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val userId = FirebaseAuth.getInstance().currentUser?.uid.orEmpty()
-        val googleAuthClient = GoogleAuthClient(applicationContext)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             requestPermissions(arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), 101)
         }
+
+        val hasGmailAccess = intent.getBooleanExtra("HAS_GMAIL_ACCESS", false)
+        Log.d(TAG, "DashboardActivity launched. Has Gmail Access: $hasGmailAccess")
 
         setContent {
             VoilaTheme {
@@ -55,13 +63,18 @@ class DashboardActivity : ComponentActivity() {
                         showLoading = false
                     }
                 } else {
-                    DashboardScreen(userId = userId) {
-                        lifecycleScope.launch {
-                            googleAuthClient.signOut()
-                            startActivity(Intent(this@DashboardActivity, MainActivity::class.java))
-                            finish()
+                    DashboardScreen(
+                        userId = userId,
+                        hasGmailAccess = hasGmailAccess, // Pass the flag to your Composable
+                        googleAuthClient = googleAuthClient, // Pass the client instance
+                        onSignOut = {
+                            lifecycleScope.launch {
+                                googleAuthClient.signOut()
+                                startActivity(Intent(this@DashboardActivity, MainActivity::class.java))
+                                finish()
+                            }
                         }
-                    }
+                    )
                 }
             }
         }
@@ -69,16 +82,30 @@ class DashboardActivity : ComponentActivity() {
 }
 
 @Composable
-fun DashboardScreen(userId: String, onSignOut: () -> Unit) {
+fun DashboardScreen(
+    userId: String,
+    hasGmailAccess: Boolean,
+    googleAuthClient: GoogleAuthClient,
+    onSignOut: () -> Unit) {
     val subscriptions = remember { mutableStateListOf<Subscription>() }
     var showDialog by remember { mutableStateOf(false) }
     val context = LocalContext.current
+    val inboxTitle = remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(Unit) {
         getSubscriptions(userId) {
             subscriptions.clear()
             subscriptions.addAll(it)
             showRenewalNotificationIfDueSoon(context, it)
+        }
+
+        if (hasGmailAccess) {
+            Log.d("DashboardScreen", "Attempting to fetch first email title...")
+            inboxTitle.value = googleAuthClient.getFirstInboxTitle()
+            Log.d("DashboardScreen", "Fetched inbox title: ${inboxTitle.value}")
+        } else {
+            Log.d("DashboardScreen", "Gmail access not granted, not fetching email title.")
+            inboxTitle.value = "Gmail access not granted." // Inform the user
         }
     }
 
@@ -92,6 +119,15 @@ fun DashboardScreen(userId: String, onSignOut: () -> Unit) {
                 color = Color(0xFFC084FC),
                 fontWeight = FontWeight.Bold
             )
+
+            inboxTitle.value?.let { title ->
+                Text(
+                    text = "First Email Subject: $title",
+                    fontSize = 16.sp,
+                    color = Color.Blue, // Use a distinct color
+                    modifier = Modifier.padding(vertical = 8.dp)
+                )
+            }
 
             subscriptions.forEach { sub ->
                 SubscriptionCard(sub) { }

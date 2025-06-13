@@ -8,6 +8,9 @@ import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.IntentSenderRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
@@ -25,33 +28,58 @@ import com.google.android.gms.auth.api.identity.AuthorizationResult
 import com.google.android.gms.auth.api.identity.Identity
 import com.google.android.gms.common.api.Scope
 import com.google.api.services.gmail.GmailScopes
-import com.google.firebase.auth.FirebaseAuth
 import com.mohdfaizzzz.voila.ui.theme.VoilaTheme
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import androidx.navigation.NavHostController
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
-import androidx.navigation.compose.rememberNavController
 
 
 private const val REQUEST_CODE_AUTH = 1001
+private const val TAG = "MainActivity: "
 
+// MainActivity is the entry point of the Android application
 class MainActivity : ComponentActivity() {
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
+    private lateinit var googleAuthClient: GoogleAuthClient
+    private lateinit var gmailAuthLauncher: ActivityResultLauncher<IntentSenderRequest>
+    override fun onCreate(savedInstanceState: Bundle?) { // called when the app is launched
+        super.onCreate(savedInstanceState) // restore the state of the UI as it was before it was previously closed, if applicable
+        enableEdgeToEdge() // UI feature
 
-        val googleAuthClient = GoogleAuthClient(applicationContext)
+        googleAuthClient = GoogleAuthClient(context = applicationContext)
 
+        gmailAuthLauncher = registerForActivityResult(
+            ActivityResultContracts.StartIntentSenderForResult()
+        ) { result ->
+            val authResult: AuthorizationResult? = result.data?.let { intentData ->
+                Identity.getAuthorizationClient(this).getAuthorizationResultFromIntent(intentData)
+            }
+
+            if (authResult != null) {
+                val requestedScopesObjects: List<Scope> = listOf(Scope(GmailScopes.GMAIL_READONLY))
+                val requestedScopes: List<String> = requestedScopesObjects.map { it.scopeUri }
+                val actualGrantedScopes: MutableList<String> = authResult.grantedScopes
+                val hasGmailAccess = actualGrantedScopes.containsAll(requestedScopes)
+
+                if (hasGmailAccess) {
+                    println(TAG + "Gmail Authorization Successful! Navigating to Dashboard.")
+                } else {
+                    println(TAG + "Gmail Authorization Failed or Denied by user. Navigating to Dashboard without full access.")
+                }
+                navigateToDashboard(hasGmailAccess)
+            } else {
+                // This case would happen if result.data is null, meaning no result intent was provided
+                println(TAG + "Authorization result intent was null. Navigating to Dashboard without full access.")
+                navigateToDashboard(false)
+            }
+        }
+
+        // UI Content of the App
         setContent {
             VoilaTheme {
                 var isSignedIn by rememberSaveable { mutableStateOf(googleAuthClient.isSignedIn()) }
 
-                if (isSignedIn) {
+                if (isSignedIn) { // If signed in, show dashboard
                     LaunchedEffect(Unit) {
-                        startActivity(Intent(this@MainActivity, DashboardActivity::class.java))
-                        finish()
+                        navigateToDashboard(true)
                     }
                 } else {
                     SignInScreen(
@@ -60,9 +88,10 @@ class MainActivity : ComponentActivity() {
                             lifecycleScope.launch {
                                 val success = googleAuthClient.signIn()
                                 if (success) {
-                                    requestGmailAuthorization(this@MainActivity)
-                                    startActivity(Intent(this@MainActivity, DashboardActivity::class.java))
-                                    finish()
+                                    isSignedIn = true
+                                    requestGmailAuthorization()
+                                } else {
+                                    Log.e(TAG, "Google Sign-In failed.")
                                 }
                             }
                         }
@@ -71,6 +100,33 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+
+    private fun navigateToDashboard(hasGmailAccess: Boolean) {
+        val intent = Intent(this@MainActivity, DashboardActivity::class.java).apply {
+            putExtra("HAS_GMAIL_ACCESS", hasGmailAccess)
+        }
+        startActivity(intent)
+        finish()
+    }
+
+    private fun requestGmailAuthorization() { // No longer needs `activity: Activity` parameter
+        val requestedScopes = listOf(Scope(GmailScopes.GMAIL_READONLY))
+        val authorizationRequest = AuthorizationRequest.builder().setRequestedScopes(requestedScopes).build()
+        Identity.getAuthorizationClient(this).authorize(authorizationRequest)
+            .addOnSuccessListener { result ->
+                result.pendingIntent?.let {
+                    try {
+                        // Use the new launcher to start the intent
+                        gmailAuthLauncher.launch(IntentSenderRequest.Builder(it).build())
+                    } catch (e: IntentSender.SendIntentException) {
+                        Log.e(TAG, "Failed to create IntentSenderRequest", e)
+                    }
+                }
+            }
+            .addOnFailureListener { e -> Log.e(TAG, "Authorization failed before launching UI", e) }
+    }
+
+
 }
 
 @Composable
@@ -116,20 +172,4 @@ fun LoadingScreen(onFinishLoading: () -> Unit) {
     ) {
         CircularProgressIndicator(color = Color(0xFFA855F7))
     }
-}
-
-private fun requestGmailAuthorization(activity: Activity) {
-    val requestedScopes = listOf(Scope(GmailScopes.GMAIL_READONLY))
-    val authorizationRequest = AuthorizationRequest.builder().setRequestedScopes(requestedScopes).build()
-    Identity.getAuthorizationClient(activity).authorize(authorizationRequest)
-        .addOnSuccessListener { result ->
-            result.pendingIntent?.let {
-                try {
-                    activity.startIntentSenderForResult(it.intentSender, REQUEST_CODE_AUTH, null, 0, 0, 0, null)
-                } catch (e: IntentSender.SendIntentException) {
-                    Log.e("Auth", "Failed to start auth UI", e)
-                }
-            }
-        }
-        .addOnFailureListener { e -> Log.e("Auth", "Authorization failed", e) }
 }
