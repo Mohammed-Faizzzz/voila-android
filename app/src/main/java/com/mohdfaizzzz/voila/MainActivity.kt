@@ -28,12 +28,11 @@ import com.google.android.gms.auth.api.identity.AuthorizationResult
 import com.google.android.gms.auth.api.identity.Identity
 import com.google.android.gms.common.api.Scope
 import com.google.api.services.gmail.GmailScopes
+import com.google.firebase.auth.FirebaseAuth
 import com.mohdfaizzzz.voila.ui.theme.VoilaTheme
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-
-private const val REQUEST_CODE_AUTH = 1001
 private const val TAG = "MainActivity: "
 
 // MainActivity is the entry point of the Android application
@@ -59,10 +58,15 @@ class MainActivity : ComponentActivity() {
                 val actualGrantedScopes: MutableList<String> = authResult.grantedScopes
                 val hasGmailAccess = actualGrantedScopes.containsAll(requestedScopes)
 
-                if (hasGmailAccess) {
-                    println(TAG + "Gmail Authorization Successful! Navigating to Dashboard.")
+                val gmailAccessToken: String? = authResult.accessToken
+                if (hasGmailAccess && gmailAccessToken != null) {
+                    googleAuthClient.currentGmailAccessToken = gmailAccessToken
+                    println(TAG + "Gmail Authorization Successful! Token stored. Navigating to Dashboard.")
+                    navigateToDashboard(true) // Just pass hasGmailAccess
                 } else {
-                    println(TAG + "Gmail Authorization Failed or Denied by user. Navigating to Dashboard without full access.")
+                    googleAuthClient.currentGmailAccessToken = null // Clear if not granted
+                    println(TAG + "Gmail Authorization Failed or Denied. Token not stored. Navigating to Dashboard without full access.")
+                    navigateToDashboard(false) // Just pass hasGmailAccess
                 }
                 navigateToDashboard(hasGmailAccess)
             } else {
@@ -104,6 +108,8 @@ class MainActivity : ComponentActivity() {
     private fun navigateToDashboard(hasGmailAccess: Boolean) {
         val intent = Intent(this@MainActivity, DashboardActivity::class.java).apply {
             putExtra("HAS_GMAIL_ACCESS", hasGmailAccess)
+            // putExtra("GMAIL_ACCESS_TOKEN", gmailAccessToken)
+            // putExtra("GMAIL_ACCOUNT_ID", authorizedUserIdForGmail)
         }
         startActivity(intent)
         finish()
@@ -120,13 +126,17 @@ class MainActivity : ComponentActivity() {
                         gmailAuthLauncher.launch(IntentSenderRequest.Builder(it).build())
                     } catch (e: IntentSender.SendIntentException) {
                         Log.e(TAG, "Failed to create IntentSenderRequest", e)
+                        navigateToDashboard(false)
                     }
+                } ?: run {
+                    // This case means pendingIntent was null, which is unexpected for success.
+                    Log.e(TAG, "Authorization successful, but pendingIntent was null. Navigating without Gmail access.")
+                    navigateToDashboard(false)
                 }
             }
             .addOnFailureListener { e -> Log.e(TAG, "Authorization failed before launching UI", e) }
+            navigateToDashboard(false)
     }
-
-
 }
 
 @Composable

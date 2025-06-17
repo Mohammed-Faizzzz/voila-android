@@ -1,6 +1,5 @@
 package com.mohdfaizzzz.voila
 
-import android.app.ComponentCaller
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
@@ -10,7 +9,6 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
@@ -33,10 +31,7 @@ import java.text.SimpleDateFormat
 import java.util.*
 import java.util.concurrent.TimeUnit
 import androidx.core.net.toUri
-import android.app.DatePickerDialog
 import android.util.Log
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.foundation.clickable
 
 
 class DashboardActivity : ComponentActivity() {
