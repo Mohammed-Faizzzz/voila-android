@@ -9,6 +9,11 @@ android {
     namespace = "com.mohdfaizzzz.voila"
     compileSdk = 35
 
+    buildFeatures {
+        buildConfig = true
+        compose = true
+    }
+
     defaultConfig {
         applicationId = "com.mohdfaizzzz.voila"
         minSdk = 24
@@ -17,6 +22,12 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        vectorDrawables {
+            useSupportLibrary = true
+        }
+
+        val serverClientId = project.findProperty("google.serverClientId") as String? ?: ""
+        buildConfigField("String", "GOOGLE_SERVER_CLIENT_ID", "\"$serverClientId\"")
     }
 
     buildTypes {
@@ -34,9 +45,6 @@ android {
     }
     kotlinOptions {
         jvmTarget = "11"
-    }
-    buildFeatures {
-        compose = true
     }
     packaging {
         resources {
@@ -77,7 +85,6 @@ dependencies {
     implementation(libs.firebase.auth.ktx)
     implementation(libs.firebase.firestore.ktx)
 
-    implementation(libs.play.services.auth)
     implementation(libs.google.api.client.android)
     implementation(libs.google.api.services.gmail) // For Gmail API scopes
 
@@ -87,5 +94,5 @@ dependencies {
 
     implementation(libs.google.firebase.messaging.ktx)
     implementation(libs.androidx.navigation.compose)
-
+    implementation(libs.google.http.client.gson)
 }
