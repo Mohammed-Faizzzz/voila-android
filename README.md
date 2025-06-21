@@ -80,6 +80,11 @@ Voila's codebase demonstrates several core Android development concepts:
   * **Streamlined Cancellation:** A dedicated "Cancel" button on each subscription card (currently using a placeholder, but designed for dynamic links) simplifies the process by directing users to the service's cancellation page.
   * **Resource Efficiency:** The app is designed with a lightweight architecture to minimize server-side costs.
 
+### Work to be Done:
+
+  * **Gmail Authorization:** There are bugs in the Gmail Authorization at the moment.
+  * **Subscription Data Scraping:** Parsing functionality needs to be implemented.
+  * **Streamlined Cancellation:** Cancellation links for various services needs to be added.
 -----
 
 ## Getting Started (for Developers)
